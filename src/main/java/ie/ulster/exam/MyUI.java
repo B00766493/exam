@@ -1,54 +1,17 @@
 package ie.ulster.exam;
 
 import java.util.*;
-
 import java.util.stream.Collectors;
-
-import java.sql.Connection;
-
-import java.sql.DriverManager;
-
-import java.sql.ResultSet;
-
+import java.sql.*;
 import javax.servlet.annotation.WebServlet;
-
 import com.vaadin.annotations.Theme;
-
 import com.vaadin.annotations.VaadinServletConfiguration;
-
 import com.vaadin.server.VaadinRequest;
-
 import com.vaadin.server.VaadinServlet;
-
 import com.vaadin.shared.ui.ContentMode;
-
 import com.vaadin.shared.ui.slider.SliderOrientation;
-
-import com.vaadin.ui.Button;
-
-import com.vaadin.ui.ComboBox;
-
-import com.vaadin.ui.Grid;
-
-import com.vaadin.ui.HorizontalLayout;
-
-import com.vaadin.ui.Label;
-
-import com.vaadin.ui.MultiSelect;
-
-import com.vaadin.ui.Notification;
-
-import com.vaadin.ui.Slider;
-
-import com.vaadin.ui.TextField;
-
-import com.vaadin.ui.UI;
-
-import com.vaadin.ui.VerticalLayout;
-
+import com.vaadin.ui.*;
 import com.vaadin.ui.Grid.SelectionMode;
-
-
 
 /**
 
@@ -71,13 +34,11 @@ import com.vaadin.ui.Grid.SelectionMode;
 @Theme("mytheme")
 
 public class MyUI extends UI {
-
     @Override
+protected void init(VaadinRequest vaadinRequest) {
+         Connection connection = null;
 
-    protected void init(VaadinRequest vaadinRequest) {
-
-        Connection connection = null;
-
+        // Connect to the database in Azure by JDBC
         String connectionString =  "jdbc:sqlserver://b00766493.database.windows.net:1433;"+
         "database=B00766493-exam;"+
         "user=B00766493@b00766493;"+
@@ -87,196 +48,172 @@ public class MyUI extends UI {
         "hostNameInCertificate=*.database.windows.net;"+
         "loginTimeout=30;";
 
-
-
+        // User Interface design, horizontal and vertical overall
         final HorizontalLayout horizontalLayout = new HorizontalLayout();
-
         final VerticalLayout layout = new VerticalLayout();
+        // Grid layout
+        Grid<Customer> myGrid = new Grid<>();
+        //myGrid.setWidth("1200px");
+        myGrid.setSizeFull();
+        // set the grid to the full width of the page
 
 
+        // The logo in HTML
+        Label logo = new Label(
+        "<H1>Marty Party Planners</H1> <p/> <h3>Please enter the details below and click Book</h3>");
+        logo.setContentMode(com.vaadin.shared.ui.ContentMode.HTML);
 
-        Grid<RoomBooking> myGrid = new Grid<>();
-
-        myGrid.setWidth("1200px");
-
-
-
-        Label headline = new Label(
-
-                "<H1>Marty Party Planners</H1> <p/> <h3>Please enter the details below and click Book</h3>");
-
-        headline.setContentMode(com.vaadin.shared.ui.ContentMode.HTML);
-
-
-
+        // A label under the grid with student number
+        Label label = new Label ("B00766493");
+        
+        // a textfield  
         final TextField name = new TextField();
-
         name.setCaption("Name of Party");
 
+        // Slider
+        Slider slider = new Slider(0, 200);
+        slider.setCaption("How many people are invited to this party");
+        slider.setOrientation(SliderOrientation.HORIZONTAL);
+        slider.setWidth("500px");// setslider width to 500 PIXELS
+        slider.setValue(100.0);// Set slider value to midpoint
+       
+        /*
+        slider.setWidth(slider.getMax()+"px");
+        slider.addValueChangeListener(e ->{
+            double x = slider.getValue();
+            value.setValue(""+x);
+        });
 
+        value.addValueChangeListener(e ->{
+            
+            double x = Double.parseDouble(value.getValue());
+            if (x>slider.getMax()){
+                slider.setMax(x);
+                slider.setWidth(x+"px");
+            }
+            else if (x<slider.getMin()){
+                x = slider.getMin();
+            }
+            slider.setValue(x);
+        });
 
-        Slider people = new Slider(0, 200);
+*/
+        // Book button
+        Button button = new Button("Book");
 
-        people.setCaption("How many people are invited to this party");
-
-        people.setOrientation(SliderOrientation.HORIZONTAL);
-
-        people.setWidth("500px");
-
-        Button button = new Button("click");
-
+        // label
         final Label vertvalue = new Label();
 
-
-
-        people.addValueChangeListener(event -> {
-
+        slider.addValueChangeListener(event -> {
             int value = event.getValue().intValue();
-
             vertvalue.setValue(String.valueOf(value));
 
         });
 
 
-
+        // Drop down selections
         ComboBox<String> comboBox = new ComboBox<>("Children attending?");
-
         comboBox.setItems("No", "Yes");
 
-
-
         try {
-
+            // Connect with JDBC driver to a database
             connection = DriverManager.getConnection(connectionString);
-
             ResultSet rs = connection.createStatement().executeQuery("SELECT * FROM rmBooking;");
-
-            List<RoomBooking> rm = new ArrayList<RoomBooking>();
-
-
+            // Convert the resultset that comes back into a list- we need a 
+            // Javaclass to represent the data (Customer.java in this case)
+            List<Customer> customers = new ArrayList<Customer>();
 
             // While there are more records in the resultset
-
             while (rs.next()) {
+            // Add a new customer instantiated with the fields from the record(that
+            //we want, we might not want all the fields, note how I skip the ID)
+                customers.add(new Customer(rs.getString("room"), 
+                                            rs.getInt("capacity"), 
+                                            rs.getString("feature"),
+                                            rs.getString("Alcohol_allowed")));
 
-                rm.add(new RoomBooking(rs.getString("room"), rs.getInt("capacity"), rs.getString("feature"),
-
-                        rs.getString("Alcohol_allowed")));
-
-            }
+            }// Add a label to the web app and name of
+            //the database we connected to 
 
             // Set the items (List)
-
-            myGrid.setItems(rm);
-
+            myGrid.setItems(customers);
             // Configure the order and the caption of the grid
-
-            myGrid.addColumn(RoomBooking::getRoom).setCaption("Room");
-
-            myGrid.addColumn(RoomBooking::getCapacity).setCaption("Capacity");
-
-            myGrid.addColumn(RoomBooking::getFeature).setCaption("Feature");
-
-            myGrid.addColumn(RoomBooking::getAlcohol).setCaption("Alcohol Allowed?");
-
-
+            myGrid.addColumn(Customer::getRoom).setCaption("Room");
+            myGrid.addColumn(Customer::getCapacity).setCaption("Capacity");
+            myGrid.addColumn(Customer::getFeature).setCaption("Feature");
+            myGrid.addColumn(Customer::getAlcohol).setCaption("Alcohol Allowed?");
+            
 
         } catch (Exception e) {
 
-            // This will show an error message if something went wrong
-
-            layout.addComponent(new Label(e.getMessage()));
+            // This will show an error notyet if something went wrong
+        layout.addComponent(new Label(e.getMessage()));
 
         }
-
-        Label message = new Label();
-
-        message.setValue("Your party is not booked yet");
-
-        message.setContentMode(ContentMode.HTML);
+        // create a label, initially set it to show not booked
+        Label notyet = new Label();
+        notyet.setValue("Your party is not booked yet");
+        notyet.setContentMode(ContentMode.HTML);
 
 
-
+        // Set the grid to be multi selectable
         myGrid.setSelectionMode(SelectionMode.MULTI);
-
-        MultiSelect<RoomBooking> select = myGrid.asMultiSelect();
+        MultiSelect<Customer> select = myGrid.asMultiSelect();
 
         myGrid.addSelectionListener(event -> {
-
-
-
-            Notification.show(select.getValue().stream().map(RoomBooking::getRoom).collect(Collectors.joining(","))
-
-                    + " were selected");
-
-
-
+        // to returns current value of objects
+        Notification.show(select.getValue().stream().map(Customer::getRoom)
+        .collect(Collectors.joining(",")) + " were selected");
         });
-
-
 
         button.addClickListener(e -> {
+        // returns the current value of the objects, a sequential stream
+        // applying the given function of the elements
+        String aString = select.getValue().stream().map(Customer::getAlcohol).collect(Collectors.joining(","));
 
-            String aString = select.getValue().stream().map(RoomBooking::getAlcohol).collect(Collectors.joining(","));
+        int cap = select.getValue().stream().mapToInt(Customer::getCapacity).sum();
 
-            int cap = select.getValue().stream().mapToInt(RoomBooking::getCapacity).sum();
+        notyet.setValue(String.valueOf(cap));
+        // when all conditions have been met, the button can return "booked" etc
+         String match = "true";
 
-            message.setValue(String.valueOf(cap));
-
-            String match = "true";
-
-
-
+            // if one of the selections is incomplete, the reminders are shown
             if (myGrid.getSelectedItems().size() == 0) {
+                notyet.setValue("<strong>Please select at least one room!</strong>");
 
-                message.setValue("<strong>Please select at least one room!</strong>");
-
+                // if name field is empty, the reminder to fill in this field will appear 
             } else if (name.isEmpty()) {
+                notyet.setValue("<strong>Please enter party name.</strong>");
 
-                message.setValue("<strong>Please enter party name.</strong>");
-
+                // if drop down selection has not been chosed, the reminder will appear
             } else if (comboBox.isEmpty()) {
+                notyet.setValue("<strong>Please confirm if children attending your party</strong>");
 
-                message.setValue("<strong>Please confirm if children attending your party</strong>");
-
+                // if drop down selection is yes, display the reminder
             } else if ((comboBox.getValue() == "Yes") && (aString.equalsIgnoreCase(match))) {
-
-                message.setValue(
-
+                notyet.setValue(
                         "<strong>You cannot select any rooms serving alcohol if children are attending.</strong>");
 
-            } else if (people.getValue().intValue() > cap) {
-
-                message.setValue("<strong>You have selected rooms with a max capacity of " + cap
-
-                        + " which is not enough to hold </strong>" + people.getValue().intValue());
-
+                // if slider is has chosen capacity greater than chosen room, display       
+            } else if (slider.getValue().intValue() > cap) {
+                notyet.setValue("<strong>You have selected rooms with a max capacity of " + cap
+                        + " which is not enough to hold </strong>" + slider.getValue().intValue());
+                
+                // else you are successful
             } else {
-
-                message.setValue("<strong>Success! The party is booked now</strong>");
-
+                notyet.setValue("<strong>Success! The party is booked now</strong>");
             }
-
-
-
         });
 
-
-
-        layout.addComponent(headline);
-
-        horizontalLayout.addComponents(name, people, comboBox);
-
+        // Structure 
+        layout.addComponent(logo);
+        horizontalLayout.addComponents(name, slider, comboBox);
         layout.addComponent(horizontalLayout);
-
+        // sub layout
         layout.addComponent(button);
-
-
-
-        layout.addComponent(message);
-
+        layout.addComponent(notyet);
         layout.addComponent(myGrid);
-
+        layout.addComponent(label);
         setContent(layout);
 
     }
